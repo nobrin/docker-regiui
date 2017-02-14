@@ -56,7 +56,7 @@ RegiUI requires python 2.7 and [bottle.py](https://bottlepy.org). You have to in
 ```
 $ sudo yum -y install python2-bottle
 $ export PYTHONPATH=<path to lib of RegiUI>:$PYTHONPATH
-$ python /usr/lib/python2.7/site-packages/bottle.py regiui
+$ python /usr/lib/python2.7/site-packages/bottle.py regiui.app
 Bottle v0.12.9 server starting up (using WSGIRefServer())...
 Listening on http://localhost:8080/
 Hit Ctrl-C to quit.

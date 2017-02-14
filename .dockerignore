@@ -1,5 +1,11 @@
 Dockerfile
-code
+.dockerignore
+.git/
+!.git/HEAD
+!.git/refs
+.gitignore
+pkgs/
+code/
 lib/bottle.py
 */*.pyc
 README.md

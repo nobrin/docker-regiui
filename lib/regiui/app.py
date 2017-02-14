@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 # Project:
 # Module:
-import sys, os
+import sys, os, re
 import bottle
 from bottle import route, static_file, redirect, request, HTTPError
-from docker_registry import Registry
+from . import Registry
 
-bottle.TEMPLATE_PATH = [os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "templates"))]
-STATIC_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "public"))
+LIB_PATH = re.sub(r"/python%d\.%d/site-packages/regiui$", "/regiui", os.path.abspath(os.path.dirname(__file__)))
+SHARE_PATH = os.path.abspath(os.path.join(LIB_PATH, "..", "..", "share", "regiui"))
+STATIC_PATH = os.path.join(SHARE_PATH, "static")
+bottle.TEMPLATE_PATH = [os.path.join(SHARE_PATH, "views")]
+print SHARE_PATH
 
 PREFIX = os.environ.get("URL_PREFIX", "/").rstrip("/") + "/"
 REGISTRY = os.environ.get("REGISTRY", "http://localhost:5000")

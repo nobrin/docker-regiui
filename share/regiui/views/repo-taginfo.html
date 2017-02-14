@@ -59,7 +59,7 @@
           <div class="modal-body">
             <p class="text-danger"><strong>This function is EXPERIMENTAL and DANGEROUS. Do your own risk!!</strong></p>
             <p>This action CANNOT be undone. This will permanently delete the <b>{{ reponame }}:{{ info["name"] }}</b> tag from {{ reponame }} repository.</p>
-            <p>Please type in the name of the tag to confirm.</p>
+            <p>Please type in the name of the tag '<b>{{ info["name"] }}</b>' to confirm.</p>
             <input type="text" class="form-control" id="txtDelete">
           </div>
           <div class="modal-footer">
