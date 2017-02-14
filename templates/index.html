@@ -1,0 +1,13 @@
+% rebase("frame.html", title="Docker Registry WebUI")
+    <div class="row">
+      <div class="col-md-12">
+        <h1 class="text-info">Repositories</h1>
+
+        <ul class="list-group">
+        % for repo in repos:
+          <li class="list-group-item"><span class="icon-repo text-info"></span> <a href="{{ PREFIX }}{{ repo }}">{{ repo }}</a></li>
+        % end
+        </ul>
+
+      </div>
+    </div>

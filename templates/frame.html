@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RegiUI - {{ title }}</title>
+
+  <link rel="stylesheet" href="{{ PREFIX }}bootstrap.min.css">
+  <link rel="stylesheet" href="{{ PREFIX }}regiui.css">
+  <link rel="stylesheet" href="{{ PREFIX }}octicons-p.css">
+
+  <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+  <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+  <!--[if lt IE 9]>
+    <script src="{{ PREFIX }}html5shiv.min.js"></script>
+    <script src="{{ PREFIX }}respond.min.js"></script>
+  <![endif]-->
+  <script src="{{ PREFIX }}jquery.min.js"></script>
+  <script src="{{ PREFIX }}bootstrap.min.js"></script>
+  <script>
+    function getDTString() {
+      function _d2(val) { return ("0" + val).slice(-2); }
+      var dt = new Date(Date.UTC.apply(window, arguments));
+      var s = dt.getFullYear() + "-" + _d2(dt.getMonth()) + "-" + _d2(dt.getDate());
+          s += " " + _d2(dt.getHours()) + ":" + _d2(dt.getMinutes()) + ":" + _d2(dt.getSeconds());
+          s += " " + dt.toString().match(/[+-]\d{4}/)[0];
+      return s
+    }
+  </script>
+</head>
+<body>
+  <div class="container dk">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="masthead">
+          <span class="icon-browser text-muted"></span>
+          <h3 class="text-muted"><a href="{{ PREFIX }}">RegiUI - Docker Registry WebUI</a></h3>
+        </div>
+        <div class="panel panel-default">
+          <div class="panel-body">
+          % setdefault("breadcrambs", [])
+            {{! ('<a href="%s">Home</a>' % PREFIX) if breadcrambs else "Home" }}
+          % for bc in breadcrambs:
+             / {{! ('<a href="%s">%s</a>' % (bc[1], bc[0])) if bc[1] else bc[0] }}
+          % end
+          </div>
+        </div>
+      </div>
+    </div>
+{{! base }}
+    <div class="footer text-center">
+      <hr>
+      <p class="text-muted">
+        <span class="icon-mark-github text-info"></span> <a href="https://github.com/nobrin/docker-regiui" target="_blank">GitHub repository</a>
+        <span id="spanCommit" style="display:none">
+          &nbsp;&middot;&nbsp;
+          Commit <a id="aCommit" href="#">590abfe</a> on <a id="aBranch" href="#"><span class="icon-git-branch"></span> <span id="spanBranch">master</span></a>
+        </span>
+      </p>
+    </div>
+  </div>
+  <script>
+    $.ajax({
+      url: "{{ PREFIX }}version.json",
+      dataType: "json",
+      success: function(data) {
+        if(!data.git.sha1){ return; }
+        var base = "https://github.com/nobrin/docker-regiui";
+        $("#aCommit").text(data.git.sha1.slice(0, 7))
+          .attr("href", base + "/commit/" + data.git.sha1);
+        $("#spanBranch").text(data.git.branch);
+        $("#aBranch").attr("href", base + (data.git.branch == "master" ? "" : ("/tree/" + data.git.branch)));
+        $("#spanCommit").css("display", "inline");
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+% rebase("frame.html", title=reponame, breadcrambs=[(reponame, None)])
+    <div class="row">
+      <div class="col-md-12">
+        <div style="position:relative">
+          % lastcreated = ""
+          % if tags:
+          %   name, info = list(reversed(sorted(tags.items(), key=lambda tpl: unicode(tpl[1]["created"]) + tpl[0])))[0]
+          %   lastcreated = '<br><small>Last update: <script>document.write(getDTString(%s));</script> / %s</small>' % (", ".join([str(x) for x in info["created"].timetuple()[:6]]), name)
+          % end
+          <h1 class="text-info">{{ reponame }}{{! lastcreated }}</h1>
+          % if DELETE_ENABLED:
+          <button class="btn btn-danger" style="position:absolute;top:0;right:0" data-toggle="modal" data-target="#myModal">Delete This Repository</button>
+          % end
+        </div>
+
+        % if False:
+        <div class="panel panel-default">
+          <div class="panel-heading"><h2 class="panel-title">Description</h2></div>
+          <div class="panel-body">
+            Repository description...
+          </div>
+        </div>
+        % end
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h2 class="panel-title">Tags</h2>
+          </div>
+          <div class="panel-body">
+            <table class="table">
+              <thead>
+                <tr><th>Tag</th><th>Image ID</th><th>Created</th><th>Compressed Size</th></tr>
+              </thead>
+              <tbody>
+              % for name, info in reversed(sorted(tags.items(), key=lambda tpl: unicode(tpl[1]["created"]) + tpl[0])):
+                <tr><td><span class="icon-tag text-info"></span> <a href="{{ PREFIX }}{{ reponame }}/{{ name }}">{{ name }}</a></td><td>{{ info["image_id"] }}</td><td><script>document.write(getDTString({{ ", ".join([str(x) for x in info["created"].timetuple()[:6]]) }}));</script></td><td>{{ size_string(info["compressed_size"]) }}</td></tr>
+              % end
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog">
+      <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">Are you ABSOLUTELY sure?</h4>
+          </div>
+          <div class="modal-body">
+            <p class="text-danger"><strong>This function is EXPERIMENTAL and DANGEROUS. Do your own risk!!</strong></p>
+            <p>This action CANNOT be undone. This will permanently delete the <b>{{ reponame }}</b> repository.</p>
+            <p>Please type in the name of the repository to confirm.</p>
+            <input type="text" class="form-control" id="txtDelete">
+          </div>
+          <div class="modal-footer">
+            <a href="{{ PREFIX }}repo-delete?n={{ reponame }}" type="button" class="btn btn-danger" style="width:100%" id="cmdDelete" disabled>OK, delete this REPOSITORY</a>
+          </div>
+        </div><!-- /.modal-content -->
+      </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <script>
+    $(function() {
+      $("#myModal").on("show.bs.modal", function(evt) {
+        $("#cmdDelete").attr("disabled", true);
+        $("#txtDelete").val("");
+      });
+      $("#txtDelete").keyup(function(evt) {
+        if($(this).val() == "{{ reponame }}"){ $("#cmdDelete").attr("disabled", false); }
+      });
+    });
+    </script>

@@ -1,0 +1,13 @@
+html { position: relative; min-height: 100%; }
+body { margin-bottom: 6em; }
+.footer { position: absolute; margin: 0; right: 0; bottom: 0; height: 6em; width: 100%; }
+.dk .list-group-item { font-size: 140%; line-height: 250%;  }
+.panel-body > .table, .panel-body > .dl-horizontal { margin-bottom: 0; }
+.dk .dl-horizontal { font-size: 120%; }
+.dk .dl-horizontal dt { margin: 5px 0; }
+.dk .dl-horizontal dd { padding: 5px 0 5px 10px; }
+.dk .masthead { position: relative; }
+.dk .masthead span { position: absolute; bottom: 5px; font-size: 32px; }
+.dk .masthead h3 { display: inline-block; margin-left: 32px; }
+.dk .masthead a { color: inherit; }
+.dk .masthead a:hover, .dk .masthead a:focus { color: inherit; text-decoration: none; }
