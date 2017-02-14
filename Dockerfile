@@ -11,11 +11,13 @@ RUN set -x \
  && GITBR=$(echo refs/heads/master | cut -d/ -f3) \
  && echo "{\"git\":{\"sha1\":\"$GITSHA1\",\"branch\":\"$GITBR\"}}" > $INSTALL_PREFIX/share/regiui/static/version.json \
  && rm -rf $INSTALL_PREFIX/.git \
- && rm -rf /tmp/* /media /mnt /run /srv
+ && rm -rf /tmp/* /media /mnt /run /srv \
+ && python -m compileall $INSTALL_PREFIX \
+ && python -O -m compileall $INSTALL_PREFIX
 ENV PYTHONPATH $INSTALL_PREFIX/lib
 USER bottle
 ENTRYPOINT ["bottle.py", \
   "-b", "0.0.0.0:8000", \
-  "regiui.app" \
+  "regiui:app" \
 ]
 EXPOSE 8000
