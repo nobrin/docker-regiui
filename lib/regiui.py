@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 # Project: docker-regiui
 # Module:  regiui
+import os
 import urllib2
 import json
 from datetime import datetime
-from logging import getLogger, basicConfig, DEBUG
+from logging import getLogger, basicConfig, DEBUG, INFO
 
 __author__  = "Nobuo Okazaki"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 __licence__ = "MIT"
 
 basicConfig(format="[%(asctime)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 logger = getLogger(__name__)
-logger.setLevel(DEBUG)
+logger.setLevel(DEBUG if os.environ.get("DEBUG") else INFO)
 
 class DockerAPI(object):
     def __init__(self, urlbase):
@@ -34,12 +35,18 @@ class Registry(object):
         self.api = DockerAPI(urlbase)
         self.api.version_check()
 
+    def has_repo(self, reponame):
+        try: self.repo(reponame)
+        except ValueError: return False
+        return True
+
     def get_all_reponames(self):
         # List repository names which contains empty tags
         res = self.api.call("GET", "_catalog")
         return sorted(json.load(res)["repositories"])
 
     def get_reponames(self):
+        # List repository which has tags
         repos = self.get_all_reponames()
         available_repos = []    # available repos have some tags.
         for reponame in repos:
@@ -189,7 +196,7 @@ def _moduleproperty(func): return type("_C", (), {"prop": property(lambda self: 
 
 @_moduleproperty
 def app():
-    import sys, os, re
+    import sys, re
     import bottle
     from bottle import Bottle, static_file, redirect, request, HTTPError, HTTPResponse
 
@@ -207,6 +214,10 @@ def app():
     PREFIX = os.environ.get("URL_PREFIX", "/").rstrip("/") + "/"
     REGISTRY = os.environ.get("REGISTRY", "http://localhost:5000")
     DELETE_ENABLED = (os.environ.get("DELETE_ENABLED", "false").lower() == "true")
+
+    for n in ("LIB_PATH", "SHARE_PATH", "DATA_PATH", "STATIC_PATH", "PREFIX", "REGISTRY", "DELETE_ENABLED"):
+        logger.info("%-15s: %r" % (n, locals()[n]))
+    logger.info("%-15s: %r" % ("TEMPLATE_PATH", bottle.TEMPLATE_PATH))
 
     def template(*args, **kw):
         kw["PREFIX"] = PREFIX
@@ -279,60 +290,50 @@ def app():
             fh.write(short.strip() + "\n")
             fh.write(desc.strip() + "\n")
 
-    @_app.route("/<reponame:path>/short", "GET")
+    @_app.route("/<reponame:path>/short", ("GET", "PUT"))
     def callback(reponame):
-        short, desc = load_description(reponame)
-        return short
+        # Operate short description
+        if not Registry(REGISTRY).has_repo(reponame): raise HTTPError(404)
+        if request.method == "GET": return load_description(reponame)[0]
+        return update_short_description(request.body.readline(), reponame)
 
-    @_app.route("/<reponame:path>/short", "PUT")
-    def callback(reponame):
-        # Save short description
-        short = update_short_description(request.body.readline(), reponame)
-        return short
-
-    @_app.route("/<reponame:path>/description", "GET")
+    @_app.route("/<reponame:path>/description", ("GET", "PUT"))
     def callback(reponame):
         # Get description
-        reg = Registry(REGISTRY)
-        short, desc = load_description(reponame)
-        return desc
-
-    @_app.route("/<reponame:path>/description", "PUT")
-    def callback(reponame):
-        # Save description
+        if not Registry(REGISTRY).has_repo(reponame): raise HTTPError(404)
+        if request.method == "GET": return load_description(reponame)[1]
         return update_description(request.body.read(), reponame)
 
     @_app.route("/<path:path>")
     def callback(path):
+        if os.path.isfile(os.path.join(STATIC_PATH, path)):
+            # If path locates existing file, return it
+            return static_file(path, root=STATIC_PATH)
+
         reg = Registry(REGISTRY)
         repos = reg.get_reponames()
 
-        # path is repository name
         if path in repos:
+            # path is repository name which has tag(s)
             repo = reg.repo(path)
-            tagnames = repo.get_tags()
-            if not tagnames:
-                # repo without tag
-                raise HTTPError(404, "File does not exist.")
             tags = {}
-            for name in tagnames:
+            for name in repo.get_tags():
                 tags[name] = repo.get_info(name)
-
             return template("repo-info.html", reponame=path, tags=tags)
 
-        # path is in all repositories and has no tag
         if path in reg.get_all_reponames():
+            # path is in all repositories and has no tag
+            # When repository has no tag after deleting tag, redirect top page.
             redirect(PREFIX)
 
-        # path contains tag
         if "/" in path:
+            # path contains tag
             reponame, tagname = path.rsplit("/", 1)
             if reponame in repos:
                 repo = reg.repo(reponame)
                 info = repo.get_info(tagname)
                 return template("repo-taginfo.html", reponame=reponame, info=info)
 
-        # return static file
-        return static_file(path, root=STATIC_PATH)
+        raise HTTPError(404)
 
     return _app
