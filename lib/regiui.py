@@ -4,16 +4,22 @@
 import urllib2
 import json
 from datetime import datetime
+from logging import getLogger, basicConfig, DEBUG
 
 __author__  = "Nobuo Okazaki"
 __version__ = "0.2.1"
 __licence__ = "MIT"
+
+basicConfig(format="[%(asctime)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+logger = getLogger(__name__)
+logger.setLevel(DEBUG)
 
 class DockerAPI(object):
     def __init__(self, urlbase):
         self.urlbase = urlbase.rstrip("/") + "/v2"
 
     def call(self, method, url, headers={}, data=None):
+        logger.debug("Registy API: %s/%s" % (self.urlbase, url))
         req = urllib2.Request("%s/%s" % (self.urlbase, url), data=data)
         for n, v in headers.items(): req.add_header(n, v)
         req.get_method = lambda: method
@@ -30,9 +36,16 @@ class Registry(object):
 
     def get_reponames(self):
         res = self.api.call("GET", "_catalog")
-        return sorted(json.load(res)["repositories"])
+        repos = sorted(json.load(res)["repositories"])
+        available_repos = []    # available repos have some tags.
+        for reponame in repos:
+            if not Repository(self.api, reponame).get_tags(): continue
+            available_repos.append(reponame)
+        return available_repos
 
     def repo(self, reponame):
+        if reponame not in self.get_reponames():
+            raise ValueError("Repository '%s' does not exist." % reponame)
         return Repository(self.api, reponame)
 
     def get_images(self, content_digest):
@@ -205,16 +218,8 @@ def app():
         # List repositories
         # If a repository has no tags, it will be not shown in table.
         reg = Registry(REGISTRY)
-        repos = reg.get_reponames()
-        available_repos = []
-        for reponame in repos:
-            if not reg.repo(reponame).get_tags(): continue
-            available_repos.append(reponame)
+        available_repos = reg.get_reponames()
         return template("index.html", repos=available_repos)
-
-    @_app.route("/test")
-    def callback():
-        redirect("/souffle")
 
     if DELETE_ENABLED:
         @_app.route("/tag-delete")
@@ -241,6 +246,63 @@ def app():
             if reg.delete_repo(reponame):
                 redirect("/")
             return "ERR"
+
+    VARLIB = os.path.abspath(os.path.join(LIB_PATH, "..", "data"))
+    def get_description_fullpath(reponame, tagname=None):
+        fn = re.sub(r"\W", lambda m: "%%%X" % ord(m.group(0)), reponame)
+        if tagname:
+            fn += ":" + re.sub(r"\W", lambda m: "%%%X" % ord(m.group(0)), tagname)
+        fn += ".md"
+        return os.path.join(VARLIB, fn)
+
+    def load_description(reponame, tagname=None):
+        fullpath = get_description_fullpath(reponame, tagname)
+        logger.debug("Description from %s", fullpath)
+        if os.path.isfile(fullpath):
+            with open(fullpath) as fh:
+                short = fh.readline().strip()
+                desc = fh.read().strip()
+            return short, desc
+        return "", ""
+
+    def update_short_description(short, reponame, tagname=None):
+        desc = load_description(reponame, tagname)[1]
+        save_description(short, desc, reponame, tagname)
+        return short
+
+    def update_description(desc, reponame, tagname=None):
+        short = load_description(reponame, tagname)[0]
+        save_description(short, desc, reponame, tagname)
+        return desc
+
+    def save_description(short, desc, reponame, tagname=None):
+        fullpath = get_description_fullpath(reponame, tagname)
+        with open(fullpath, "w") as fh:
+            fh.write(short.strip() + "\n")
+            fh.write(desc.strip() + "\n")
+
+    @_app.route("/<reponame:path>/short", "GET")
+    def callback(reponame):
+        short, desc = load_description(reponame)
+        return short
+
+    @_app.route("/<reponame:path>/short", "PUT")
+    def callback(reponame):
+        # Save short description
+        short = update_short_description(request.body.readline(), reponame)
+        return short
+
+    @_app.route("/<reponame:path>/description", "GET")
+    def callback(reponame):
+        # Get description
+        reg = Registry(REGISTRY)
+        short, desc = load_description(reponame)
+        return desc
+
+    @_app.route("/<reponame:path>/description", "PUT")
+    def callback(reponame):
+        # Save description
+        return update_description(request.body.read(), reponame)
 
     @_app.route("/<path:path>")
     def callback(path):
