@@ -194,6 +194,12 @@ def app():
     STATIC_PATH = os.path.join(SHARE_PATH, "static")
     bottle.TEMPLATE_PATH = [os.path.join(SHARE_PATH, "views")]
 
+    if "HOME" in os.environ and os.path.isdir(os.environ["HOME"]):
+        DATA_PATH = os.path.abspath(os.path.join(os.environ["HOME"], ".local", "share", "regiui", "data"))
+    else:
+        DATA_PATH = "/var/lib/regiui/data"
+    if not os.path.isdir(DATA_PATH): os.makedirs(DATA_PATH)
+
     PREFIX = os.environ.get("URL_PREFIX", "/").rstrip("/") + "/"
     REGISTRY = os.environ.get("REGISTRY", "http://localhost:5000")
     DELETE_ENABLED = (os.environ.get("DELETE_ENABLED", "false").lower() == "true")
@@ -247,13 +253,12 @@ def app():
                 redirect("/")
             return "ERR"
 
-    VARLIB = os.path.abspath(os.path.join(LIB_PATH, "..", "data"))
     def get_description_fullpath(reponame, tagname=None):
         fn = re.sub(r"\W", lambda m: "%%%X" % ord(m.group(0)), reponame)
         if tagname:
             fn += ":" + re.sub(r"\W", lambda m: "%%%X" % ord(m.group(0)), tagname)
         fn += ".md"
-        return os.path.join(VARLIB, fn)
+        return os.path.join(DATA_PATH, fn)
 
     def load_description(reponame, tagname=None):
         fullpath = get_description_fullpath(reponame, tagname)
