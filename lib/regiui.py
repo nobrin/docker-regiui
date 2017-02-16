@@ -34,9 +34,13 @@ class Registry(object):
         self.api = DockerAPI(urlbase)
         self.api.version_check()
 
-    def get_reponames(self):
+    def get_all_reponames(self):
+        # List repository names which contains empty tags
         res = self.api.call("GET", "_catalog")
-        repos = sorted(json.load(res)["repositories"])
+        return sorted(json.load(res)["repositories"])
+
+    def get_reponames(self):
+        repos = self.get_all_reponames()
         available_repos = []    # available repos have some tags.
         for reponame in repos:
             if not Repository(self.api, reponame).get_tags(): continue
@@ -187,7 +191,7 @@ def _moduleproperty(func): return type("_C", (), {"prop": property(lambda self: 
 def app():
     import sys, os, re
     import bottle
-    from bottle import Bottle, static_file, redirect, request, HTTPError
+    from bottle import Bottle, static_file, redirect, request, HTTPError, HTTPResponse
 
     LIB_PATH = re.sub(r"/python%d\.%d/site-packages$", "", os.path.abspath(os.path.dirname(__file__)))
     SHARE_PATH = os.path.abspath(os.path.join(LIB_PATH, "..", "share", "regiui"))
@@ -223,35 +227,24 @@ def app():
     def callback():
         # List repositories
         # If a repository has no tags, it will be not shown in table.
-        reg = Registry(REGISTRY)
-        available_repos = reg.get_reponames()
+        available_repos = Registry(REGISTRY).get_reponames()
         return template("index.html", repos=available_repos)
 
     if DELETE_ENABLED:
-        @_app.route("/tag-delete")
-        def callback():
+        @_app.route("/<reponame:path>/<tagname:re:[\w\.-]+>", "DELETE")
+        def callback(reponame, tagname):
             # Delete tag from repository
-            fullname = request.params.get("n")
-            reponame, tagname = fullname.split(":")
-            reg = Registry(REGISTRY)
-            repo = reg.repo(reponame)
+            repo = Registry(REGISTRY).repo(reponame)
             if repo.delete_tag(tagname):
-                if repo.get_tags():
-                    # The repo has some tags
-                    redirect("/%s" % reponame)
-                # The repo has no tag...
-                redirect("/")
+                return HTTPResponse(None, 204)
+            raise HTTPError(404)
 
-            return "ERR"
-
-        @_app.route("/repo-delete")
-        def callback():
+        @_app.route("/<reponame:path>", "DELETE")
+        def callback(reponame):
             # Delete repository
-            reponame = request.params.get("n")
-            reg = Registry(REGISTRY)
-            if reg.delete_repo(reponame):
-                redirect("/")
-            return "ERR"
+            if Registry(REGISTRY).delete_repo(reponame):
+                return HTTPResponse(None, 204)
+            raise HTTPError(404)
 
     def get_description_fullpath(reponame, tagname=None):
         fn = re.sub(r"\W", lambda m: "%%%X" % ord(m.group(0)), reponame)
@@ -326,6 +319,10 @@ def app():
                 tags[name] = repo.get_info(name)
 
             return template("repo-info.html", reponame=path, tags=tags)
+
+        # path is in all repositories and has no tag
+        if path in reg.get_all_reponames():
+            redirect(PREFIX)
 
         # path contains tag
         if "/" in path:
