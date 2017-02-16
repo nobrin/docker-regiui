@@ -63,7 +63,7 @@
             <input type="text" class="form-control" id="txtDelete">
           </div>
           <div class="modal-footer">
-            <a href="{{ PREFIX }}tag-delete?n={{ reponame }}:{{ info['name'] }}" type="button" class="btn btn-danger" style="width:100%" id="cmdDelete" disabled>OK, delete this TAG</a>
+            <button class="btn btn-danger" style="width:100%" id="cmdDelete" disabled>OK, delete this TAG</a>
           </div>
         </div><!-- /.modal-content -->
       </div><!-- /.modal-dialog -->
@@ -77,6 +77,13 @@
       });
       $("#txtDelete").keyup(function(evt) {
         if($(this).val() == "{{ info['name'] }}"){ $("#cmdDelete").attr("disabled", false); }
+      });
+      $("#cmdDelete").click(function(evt) {
+        $.ajax({
+          url: "{{ PREFIX }}{{ reponame }}/{{ info['name'] }}",
+          method: "DELETE",
+          success: function() { location.href = "{{ PREFIX }}{{ reponame }}"; }
+        });
       });
     });
     </script>

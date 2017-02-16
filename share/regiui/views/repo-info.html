@@ -84,7 +84,7 @@
             <input type="text" class="form-control" id="txtDelete">
           </div>
           <div class="modal-footer">
-            <a href="{{ PREFIX }}repo-delete?n={{ reponame }}" type="button" class="btn btn-danger" style="width:100%" id="cmdDelete" disabled>OK, delete this REPOSITORY</a>
+            <button class="btn btn-danger" style="width:100%" id="cmdDelete" disabled>OK, delete this REPOSITORY</button>
           </div>
         </div><!-- /.modal-content -->
       </div><!-- /.modal-dialog -->
@@ -139,5 +139,12 @@
         if($(this).val() == "{{ reponame }}"){ $("#cmdDelete").attr("disabled", false); }
       });
 
+      $("#cmdDelete").click(function(evt) {
+        $.ajax({
+          url: "{{ PREFIX }}{{ reponame }}",
+          method: "DELETE",
+          success: function() { location.href = "{{ PREFIX }}"; }
+        });
+      });
     });
     </script>
