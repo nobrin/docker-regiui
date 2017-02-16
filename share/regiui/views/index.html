@@ -5,9 +5,21 @@
 
         <ul class="list-group">
         % for repo in repos:
-          <li class="list-group-item"><span class="icon-repo text-info"></span> <a href="{{ PREFIX }}{{ repo }}">{{ repo }}</a></li>
+          <li class="list-group-item">
+            <div style="font-size: 140%">
+            <span class="icon-repo text-info"></span> <a href="{{ PREFIX }}{{ repo }}">{{ repo }}</a>
+            </div>
+            <span id="{{ repo }}" class="dru-short text-muted"></span>
+          </li>
         % end
         </ul>
 
       </div>
     </div>
+    <script>
+    $(function() {
+      $(".dru-short").each(function(idx) {
+        $(this).load("{{ PREFIX }}" + $(this).attr("id") + "/short", function(data) { $(this).text(data || "No description."); });
+      });
+    });
+    </script>

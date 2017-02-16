@@ -5,22 +5,50 @@
           % lastcreated = ""
           % if tags:
           %   name, info = list(reversed(sorted(tags.items(), key=lambda tpl: unicode(tpl[1]["created"]) + tpl[0])))[0]
-          %   lastcreated = '<br><small>Last update: <script>document.write(getDTString(%s));</script> / %s</small>' % (", ".join([str(x) for x in info["created"].timetuple()[:6]]), name)
+          %   lastcreated = '<small>Last update: <script>document.write(getDTString(%s));</script> / <span class="icon-tag"></span> %s</small>' % (", ".join([str(x) for x in info["created"].timetuple()[:6]]), name)
           % end
-          <h1 class="text-info">{{ reponame }}{{! lastcreated }}</h1>
+          <h1 class="text-info">{{ reponame }}</h1>
+          <div id="divShort" class="dru-editable">
+            <div class="dru-text-view">
+              <div class="pull-right"><button id="cmdEditShort" class="btn btn-link btn-xs"><span class="icon-pencil"></span></button></div>
+              <p class="dru-desc">
+                <span id="pShort"></span>
+              </p>
+              <p class="text-muted">{{! lastcreated }}</p>
+            </div>
+            <div class="dru-text-edit">
+              <div class="form-group">
+                <label>Short description</label>
+                <input id="txtShort" type="text" class="form-control">
+              </div>
+              <div class="form-group text-right">
+                <button class="btn btn-link btn-sm dru-edit-cancel">Cancel</button>
+                <button id="cmdSaveShort" class="btn btn-success btn-sm">Save</button>
+              </div>
+            </div>
+          </div>
           % if DELETE_ENABLED:
           <button class="btn btn-danger" style="position:absolute;top:0;right:0" data-toggle="modal" data-target="#myModal">Delete This Repository</button>
           % end
         </div>
 
-        % if False:
         <div class="panel panel-default">
-          <div class="panel-heading"><h2 class="panel-title">Description</h2></div>
-          <div class="panel-body">
-            Repository description...
+          <div class="panel-heading">
+            <div class="pull-right"><button id="cmdEdit" class="btn btn-link btn-xs"><span class="icon-pencil"></span></button></div>
+            <h2 class="panel-title">Description</h2>
+          </div>
+          <div id="divDesc" class="panel-body dru-editable" style="padding-bottom:5px">
+            <p id="pDesc" class="dru-text-view">No description ...</p>
+            <div class="dru-text-edit">
+              <textarea id="txtDesc" class="form-control" style="height:10em;margin-bottom:10px"></textarea>
+              <div class="text-right">
+                <button id="cmdCancel" class="btn btn-link">Cancel</button>
+                <button id="cmdSave" class="btn btn-success">Save</button>
+              </div>
+            </div>
           </div>
         </div>
-        % end
+
         <div class="panel panel-default">
           <div class="panel-heading">
             <h2 class="panel-title">Tags</h2>
@@ -56,7 +84,7 @@
             <input type="text" class="form-control" id="txtDelete">
           </div>
           <div class="modal-footer">
-            <a href="{{ PREFIX }}repo-delete?n={{ reponame }}" type="button" class="btn btn-danger" style="width:100%" id="cmdDelete" disabled>OK, delete this REPOSITORY</a>
+            <button class="btn btn-danger" style="width:100%" id="cmdDelete" disabled>OK, delete this REPOSITORY</button>
           </div>
         </div><!-- /.modal-content -->
       </div><!-- /.modal-dialog -->
@@ -64,12 +92,59 @@
 
     <script>
     $(function() {
+      marked.setOptions({sanitize: true});
+
+      function cancelAllEdit() { $(".dru-editable").removeClass("dru-edit"); }
+      function putDescription(descType, data, callback) {
+        $.ajax({
+          url: "{{ PREFIX }}{{ reponame }}/" + descType,
+          data: data,
+          dataType: "text",
+          method: "PUT",
+          success: callback
+        });
+      }
+
+      $(document).click(cancelAllEdit);
+      $("#txtDesc, #txtShort").click(function(evt) { return false; });
+
+      /* Operate short description */
+      function setShortDesc(desc) {
+        desc ? $("#pShort").text(desc) : $("#pShort").text("No description.").addClass("text-muted");
+        $("#txtShort").val(desc);
+      }
+      $("#pShort").load("{{ PREFIX }}{{ reponame }}/short", setShortDesc);
+      $("#cmdEditShort").click(function(evt) { cancelAllEdit(); $("#divShort").addClass("dru-edit"); return false});
+      $("#cmdSaveShort").click(function(evt) { putDescription("short", $("#txtShort").val(), setShortDesc); });
+
+      /* Operate description */
+      function setDesc(desc) {
+        desc ? $("#pDesc").html('<div class="dru-desc">' + marked(desc) + '</div>') : $("#pDesc").html("No description.").addClass("text-muted");
+        $("#txtDesc").val(desc);
+      }
+      $("#pDesc").load("{{ PREFIX }}{{ reponame }}/description", setDesc);
+      $("#cmdEdit").click(function(evt) {
+        $("#divDesc").addClass("dru-edit");
+        evt.preventDefault();
+        return false;
+      });
+      $("#cmdSave").click(function(evt) { putDescription("description", $("#txtDesc").val(), setDesc); });
+
       $("#myModal").on("show.bs.modal", function(evt) {
         $("#cmdDelete").attr("disabled", true);
         $("#txtDelete").val("");
       });
+
       $("#txtDelete").keyup(function(evt) {
         if($(this).val() == "{{ reponame }}"){ $("#cmdDelete").attr("disabled", false); }
+      });
+
+      $("#cmdDelete").click(function(evt) {
+        $.ajax({
+          url: "{{ PREFIX }}{{ reponame }}",
+          method: "DELETE",
+          success: function() { location.href = "{{ PREFIX }}"; }
+        });
       });
     });
     </script>

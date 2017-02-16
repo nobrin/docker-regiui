@@ -1,19 +1,26 @@
 # -*- coding: utf-8 -*-
 # Project: docker-regiui
 # Module:  regiui
+import os
 import urllib2
 import json
 from datetime import datetime
+from logging import getLogger, basicConfig, DEBUG, INFO
 
 __author__  = "Nobuo Okazaki"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 __licence__ = "MIT"
+
+basicConfig(format="[%(asctime)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+logger = getLogger(__name__)
+logger.setLevel(DEBUG if os.environ.get("DEBUG") else INFO)
 
 class DockerAPI(object):
     def __init__(self, urlbase):
         self.urlbase = urlbase.rstrip("/") + "/v2"
 
     def call(self, method, url, headers={}, data=None):
+        logger.debug("Registy API: %s/%s" % (self.urlbase, url))
         req = urllib2.Request("%s/%s" % (self.urlbase, url), data=data)
         for n, v in headers.items(): req.add_header(n, v)
         req.get_method = lambda: method
@@ -28,11 +35,28 @@ class Registry(object):
         self.api = DockerAPI(urlbase)
         self.api.version_check()
 
-    def get_reponames(self):
+    def has_repo(self, reponame):
+        try: self.repo(reponame)
+        except ValueError: return False
+        return True
+
+    def get_all_reponames(self):
+        # List repository names which contains empty tags
         res = self.api.call("GET", "_catalog")
         return sorted(json.load(res)["repositories"])
 
+    def get_reponames(self):
+        # List repository which has tags
+        repos = self.get_all_reponames()
+        available_repos = []    # available repos have some tags.
+        for reponame in repos:
+            if not Repository(self.api, reponame).get_tags(): continue
+            available_repos.append(reponame)
+        return available_repos
+
     def repo(self, reponame):
+        if reponame not in self.get_reponames():
+            raise ValueError("Repository '%s' does not exist." % reponame)
         return Repository(self.api, reponame)
 
     def get_images(self, content_digest):
@@ -172,18 +196,30 @@ def _moduleproperty(func): return type("_C", (), {"prop": property(lambda self: 
 
 @_moduleproperty
 def app():
-    import sys, os, re
+    import sys, re
     import bottle
-    from bottle import Bottle, static_file, redirect, request, HTTPError
+    from bottle import Bottle, static_file, redirect, request, HTTPError, HTTPResponse
 
     LIB_PATH = re.sub(r"/python%d\.%d/site-packages$", "", os.path.abspath(os.path.dirname(__file__)))
     SHARE_PATH = os.path.abspath(os.path.join(LIB_PATH, "..", "share", "regiui"))
     STATIC_PATH = os.path.join(SHARE_PATH, "static")
     bottle.TEMPLATE_PATH = [os.path.join(SHARE_PATH, "views")]
 
+    DATA_PATH = os.environ.get("DATA_PATH", "")
+    if not DATA_PATH:
+        if "HOME" in os.environ and os.path.isdir(os.environ["HOME"]):
+            DATA_PATH = os.path.abspath(os.path.join(os.environ["HOME"], ".local", "share", "regiui", "data"))
+        else:
+            DATA_PATH = "/var/lib/regiui/data"
+    if not os.path.isdir(DATA_PATH): os.makedirs(DATA_PATH)
+
     PREFIX = os.environ.get("URL_PREFIX", "/").rstrip("/") + "/"
     REGISTRY = os.environ.get("REGISTRY", "http://localhost:5000")
     DELETE_ENABLED = (os.environ.get("DELETE_ENABLED", "false").lower() == "true")
+
+    for n in ("LIB_PATH", "SHARE_PATH", "DATA_PATH", "STATIC_PATH", "PREFIX", "REGISTRY", "DELETE_ENABLED"):
+        logger.info("%-15s: %r" % (n, locals()[n]))
+    logger.info("%-15s: %r" % ("TEMPLATE_PATH", bottle.TEMPLATE_PATH))
 
     def template(*args, **kw):
         kw["PREFIX"] = PREFIX
@@ -204,71 +240,102 @@ def app():
     def callback():
         # List repositories
         # If a repository has no tags, it will be not shown in table.
-        reg = Registry(REGISTRY)
-        repos = reg.get_reponames()
-        available_repos = []
-        for reponame in repos:
-            if not reg.repo(reponame).get_tags(): continue
-            available_repos.append(reponame)
+        available_repos = Registry(REGISTRY).get_reponames()
         return template("index.html", repos=available_repos)
 
-    @_app.route("/test")
-    def callback():
-        redirect("/souffle")
-
     if DELETE_ENABLED:
-        @_app.route("/tag-delete")
-        def callback():
+        @_app.route("/<reponame:path>/<tagname:re:[\w\.-]+>", "DELETE")
+        def callback(reponame, tagname):
             # Delete tag from repository
-            fullname = request.params.get("n")
-            reponame, tagname = fullname.split(":")
-            reg = Registry(REGISTRY)
-            repo = reg.repo(reponame)
+            repo = Registry(REGISTRY).repo(reponame)
             if repo.delete_tag(tagname):
-                if repo.get_tags():
-                    # The repo has some tags
-                    redirect("/%s" % reponame)
-                # The repo has no tag...
-                redirect("/")
+                return HTTPResponse(None, 204)
+            raise HTTPError(404)
 
-            return "ERR"
-
-        @_app.route("/repo-delete")
-        def callback():
+        @_app.route("/<reponame:path>", "DELETE")
+        def callback(reponame):
             # Delete repository
-            reponame = request.params.get("n")
-            reg = Registry(REGISTRY)
-            if reg.delete_repo(reponame):
-                redirect("/")
-            return "ERR"
+            if Registry(REGISTRY).delete_repo(reponame):
+                return HTTPResponse(None, 204)
+            raise HTTPError(404)
+
+    def get_description_fullpath(reponame, tagname=None):
+        fn = re.sub(r"\W", lambda m: "%%%X" % ord(m.group(0)), reponame)
+        if tagname:
+            fn += ":" + re.sub(r"\W", lambda m: "%%%X" % ord(m.group(0)), tagname)
+        fn += ".md"
+        return os.path.join(DATA_PATH, fn)
+
+    def load_description(reponame, tagname=None):
+        fullpath = get_description_fullpath(reponame, tagname)
+        logger.debug("Description from %s", fullpath)
+        if os.path.isfile(fullpath):
+            with open(fullpath) as fh:
+                short = fh.readline().strip()
+                desc = fh.read().strip()
+            return short, desc
+        return "", ""
+
+    def update_short_description(short, reponame, tagname=None):
+        desc = load_description(reponame, tagname)[1]
+        save_description(short, desc, reponame, tagname)
+        return short
+
+    def update_description(desc, reponame, tagname=None):
+        short = load_description(reponame, tagname)[0]
+        save_description(short, desc, reponame, tagname)
+        return desc
+
+    def save_description(short, desc, reponame, tagname=None):
+        fullpath = get_description_fullpath(reponame, tagname)
+        with open(fullpath, "w") as fh:
+            fh.write(short.strip() + "\n")
+            fh.write(desc.strip() + "\n")
+
+    @_app.route("/<reponame:path>/short", ("GET", "PUT"))
+    def callback(reponame):
+        # Operate short description
+        if not Registry(REGISTRY).has_repo(reponame): raise HTTPError(404)
+        if request.method == "GET": return load_description(reponame)[0]
+        return update_short_description(request.body.readline(), reponame)
+
+    @_app.route("/<reponame:path>/description", ("GET", "PUT"))
+    def callback(reponame):
+        # Get description
+        if not Registry(REGISTRY).has_repo(reponame): raise HTTPError(404)
+        if request.method == "GET": return load_description(reponame)[1]
+        return update_description(request.body.read(), reponame)
 
     @_app.route("/<path:path>")
     def callback(path):
+        if os.path.isfile(os.path.join(STATIC_PATH, path)):
+            # If path locates existing file, return it
+            return static_file(path, root=STATIC_PATH)
+
         reg = Registry(REGISTRY)
         repos = reg.get_reponames()
 
-        # path is repository name
         if path in repos:
+            # path is repository name which has tag(s)
             repo = reg.repo(path)
-            tagnames = repo.get_tags()
-            if not tagnames:
-                # repo without tag
-                raise HTTPError(404, "File does not exist.")
             tags = {}
-            for name in tagnames:
+            for name in repo.get_tags():
                 tags[name] = repo.get_info(name)
-
             return template("repo-info.html", reponame=path, tags=tags)
 
-        # path contains tag
+        if path in reg.get_all_reponames():
+            # path is in all repositories and has no tag
+            # When repository has no tag after deleting tag, redirect top page.
+            redirect(PREFIX)
+
         if "/" in path:
+            # path contains tag
             reponame, tagname = path.rsplit("/", 1)
             if reponame in repos:
                 repo = reg.repo(reponame)
                 info = repo.get_info(tagname)
                 return template("repo-taginfo.html", reponame=reponame, info=info)
 
-        # return static file
-        return static_file(path, root=STATIC_PATH)
+        raise HTTPError(404)
 
     return _app
