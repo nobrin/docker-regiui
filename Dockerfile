@@ -18,7 +18,7 @@ RUN set -x \
  && python -O -m compileall $INSTALL_PREFIX
 USER bottle
 ENV PYTHONPATH=$INSTALL_PREFIX/lib \
-    DATA_PATH=/var/lib/regiui/data
+    REGIUI_DATA_PATH=/var/lib/regiui/data
 ENTRYPOINT ["bottle.py", \
   "-b", "0.0.0.0:8000", \
   "regiui:app" \

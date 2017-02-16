@@ -205,7 +205,7 @@ def app():
     STATIC_PATH = os.path.join(SHARE_PATH, "static")
     bottle.TEMPLATE_PATH = [os.path.join(SHARE_PATH, "views")]
 
-    DATA_PATH = os.environ.get("DATA_PATH", "")
+    DATA_PATH = os.environ.get("REGIUI_DATA_PATH", "")
     if not DATA_PATH:
         if "HOME" in os.environ and os.path.isdir(os.environ["HOME"]):
             DATA_PATH = os.path.abspath(os.path.join(os.environ["HOME"], ".local", "share", "regiui", "data"))
@@ -213,9 +213,9 @@ def app():
             DATA_PATH = "/var/lib/regiui/data"
     if not os.path.isdir(DATA_PATH): os.makedirs(DATA_PATH)
 
-    PREFIX = os.environ.get("URL_PREFIX", "/").rstrip("/") + "/"
-    REGISTRY = os.environ.get("REGISTRY", "http://localhost:5000")
-    DELETE_ENABLED = (os.environ.get("DELETE_ENABLED", "false").lower() == "true")
+    PREFIX = os.environ.get("REGIUI_HREF_PREFIX", "/").rstrip("/") + "/"
+    REGISTRY = os.environ.get("REGIUI_REGISTRY", "http://localhost:5000")
+    DELETE_ENABLED = (os.environ.get("REGIUI_DELETE_ENABLED", "false").lower() == "true")
 
     for n in ("LIB_PATH", "SHARE_PATH", "DATA_PATH", "STATIC_PATH", "PREFIX", "REGISTRY", "DELETE_ENABLED"):
         logger.info("%-15s: %r" % (n, locals()[n]))

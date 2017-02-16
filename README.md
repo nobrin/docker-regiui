@@ -12,6 +12,7 @@ The current version of RegiUI provides a basic features below:
   - Repositories
   - Tags
 - Deleting repositories/tags with Registry APIv2
+- Description for each repository (NEW in 0.3)
 - No authentication
 - No SSL
 
@@ -28,18 +29,43 @@ In this case, Docker Registry must listen on http://localhost:5000.
 ### Configuration
 You can configure RegiUI with environment variables.
 
-- REGISTRY -- Registry(v2) address (default: http://localhost:5000)
-- URL_PREFIX -- If you want to use with reverse proxy, you can set prefix. This value will be settle before links in HTML. (default: /)
-- DELETE_ENABLED -- Turn on feature of deleting repos/tags. You must use with Registry which has been started with [REGISTRY_STORAGE_DELETE_ENABLED=true](https://github.com/docker/distribution/issues/1326). (default: false)
+- REGIUI_REGISTRY -- Registry(v2) address (default: http://localhost:5000)
+- REGIUI_HREF_PREFIX -- If you want to use with reverse proxy, you can set prefix. This value will be settle before links in HTML. (default: /)
+- REGIUI_DELETE_ENABLED -- Turn on feature of deleting repos/tags. You must use with Registry which has been started with [REGISTRY_STORAGE_DELETE_ENABLED=true](https://github.com/docker/distribution/issues/1326). (default: false)
+- REGIUI_DATA_PATH -- Path to store descriptions(default: $HOME/.local/share/regiui)
 
-### Complex configuration
+### Example configuration
+
+First, start your Docker registry.
+
+```
+$ docker run -d --restart always --name registry \
+    -v <path to data>:/var/lib/registry \
+    -e REGISTRY_STORE_DELETE_ENABLED=true \
+    registry:2
+```
+
+After that, start RegiUI with linking to registry.
+
+```
+$ docker run -d -p 8000:8000 --name registry-webui \
+    --link registry
+    -v <path to regiui data>:/var/lib/regiui \
+    -e REGIUI_REGISTRY=http://registry:5000 \
+    -e REGIUI_DELETE_ENABLED=true \
+    nobrin/docker-regiui
+```
+
+In this configuration, RegiUI access to your Docker registry through network link on Docker.
+
+#### Use with proxy
 
 ```
 $ docker run -d -p 8000:8000 \
   --name registry-webui \
-  --env REGISTRY=http://docker-intra.example.com:5000 \
-  --env DELETE_ENABLED=true \
-  --env URL_PREFIX=/regiui \
+  --env REGIUI_REGISTRY=http://docker-intra.example.com:5000 \
+  --env REGIUI_DELETE_ENABLED=true \
+  --env REGIUI_HREF_PREFIX=/regiui \
   nobrin/docker-regiui
 ```
 
@@ -107,6 +133,10 @@ $ docker run --rm \
 
 ----
 ## Release Notes
+### 0.3.0 - 16 Feb 2017
+- Add description editor for repositories
+- Refactoring codes
+
 ### 0.2.1 - 15 Feb 2017
 - Merge regiui/__init__.py and app.py
 
