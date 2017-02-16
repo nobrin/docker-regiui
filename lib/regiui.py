@@ -205,10 +205,12 @@ def app():
     STATIC_PATH = os.path.join(SHARE_PATH, "static")
     bottle.TEMPLATE_PATH = [os.path.join(SHARE_PATH, "views")]
 
-    if "HOME" in os.environ and os.path.isdir(os.environ["HOME"]):
-        DATA_PATH = os.path.abspath(os.path.join(os.environ["HOME"], ".local", "share", "regiui", "data"))
-    else:
-        DATA_PATH = "/var/lib/regiui/data"
+    DATA_PATH = os.environ.get("DATA_PATH", "")
+    if not DATA_PATH:
+        if "HOME" in os.environ and os.path.isdir(os.environ["HOME"]):
+            DATA_PATH = os.path.abspath(os.path.join(os.environ["HOME"], ".local", "share", "regiui", "data"))
+        else:
+            DATA_PATH = "/var/lib/regiui/data"
     if not os.path.isdir(DATA_PATH): os.makedirs(DATA_PATH)
 
     PREFIX = os.environ.get("URL_PREFIX", "/").rstrip("/") + "/"
