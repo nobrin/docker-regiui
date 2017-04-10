@@ -85,7 +85,7 @@ class Repository(object):
         # Get tag names from registry
         try:
             res = self.api.call("GET", "%s/tags/list" % self.name)
-            tags = json.load(res).get("tags", [])
+            tags = json.load(res)["tags"] or []
         except urllib2.HTTPError as exc:
             if exc.code != 404:
                 raise exc

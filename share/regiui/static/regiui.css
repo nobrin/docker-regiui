@@ -22,3 +22,5 @@ body { margin-bottom: 6em; }
 .dk .btn-link { color: #777; }
 .dk .btn-link:hover, .dk .btn-link:focus { color: #333; text-decoration: none; }
 .dru-desc pre { border-color: transparent; }
+.dru-ns .panel-body { padding: 5px 15px; }
+.dru-ns tbody > tr:first-child > th, .dru-ns tbody > tr:first-child > td { border-top: none; }

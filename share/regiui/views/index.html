@@ -1,13 +1,42 @@
 % rebase("frame.html", title="Docker Registry WebUI")
+% namespace = {}
+% for repo in repos:
+%   if "/" in repo:
+%     ns, reponame = repo.split("/", 1)
+%     namespace.setdefault(ns, []).append(reponame)
+%   end
+% end
     <div class="row">
       <div class="col-md-12">
         <h1 class="text-info">Repositories</h1>
 
+        % for ns in sorted(namespace.keys()):
+        <div class="panel panel-default dru-ns">
+          <div class="panel-heading">
+            <h2 class="panel-title"><span class="icon-file-directory text-muted"></span> {{ ns }}</h2>
+          </div>
+          <div class="panel-body">
+            <table class="table">
+              <tbody>
+              % for repo in namespace[ns]:
+                <tr><td>
+                  <div style="font-size:140%">
+                    <span class="icon-repo text-info"></span> <a href="{{ PREFIX }}{{ ns }}/{{ repo }}">{{ repo }}</a>
+                  </div>
+                  <span id="{{ ns }}/{{ repo }}" class="dru-short text-muted"></span>
+                </td></tr>
+              % end
+              </tbody>
+            </table>
+          </div>
+        </div>
+        % end
+
         <ul class="list-group">
-        % for repo in repos:
+        % for repo in filter(lambda x: "/" not in x, repos):
           <li class="list-group-item">
             <div style="font-size: 140%">
-            <span class="icon-repo text-info"></span> <a href="{{ PREFIX }}{{ repo }}">{{ repo }}</a>
+              <span class="icon-repo text-info"></span> <a href="{{ PREFIX }}{{ repo }}">{{ repo }}</a>
             </div>
             <span id="{{ repo }}" class="dru-short text-muted"></span>
           </li>
