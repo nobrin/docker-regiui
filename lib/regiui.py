@@ -83,8 +83,13 @@ class Repository(object):
 
     def get_tags(self):
         # Get tag names from registry
-        res = self.api.call("GET", "%s/tags/list" % self.name)
-        tags = json.load(res)["tags"] or []
+        try:
+            res = self.api.call("GET", "%s/tags/list" % self.name)
+            tags = json.load(res).get("tags", [])
+        except urllib2.HTTPError as exc:
+            if exc.code != 404:
+                raise exc
+            tags = []
         return sorted(tags)
 
     def get_tags_by_digest(self, content_digest):
