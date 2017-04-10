@@ -1,4 +1,4 @@
-% rebase("frame.html", title="Docker Registry WebUI")
+% rebase("frame.html", title="Docker Registry WebUI", breadcrambs=[(namespace, None)] if defined("namespace") else [])
 % namespace = {}
 % for repo in repos:
 %   if "/" in repo:
@@ -13,7 +13,7 @@
         % for ns in sorted(namespace.keys()):
         <div class="panel panel-default dru-ns">
           <div class="panel-heading">
-            <h2 class="panel-title"><span class="icon-file-directory text-muted"></span> {{ ns }}</h2>
+            <h2 class="panel-title"><span class="icon-file-directory text-muted"></span> <a href="{{ PREFIX }}{{ ns }}">{{ ns }}</a></h2>
           </div>
           <div class="panel-body">
             <table class="table">
@@ -35,7 +35,7 @@
         <ul class="list-group">
         % for repo in filter(lambda x: "/" not in x, repos):
           <li class="list-group-item">
-            <div style="font-size: 140%">
+            <div style="font-size:140%">
               <span class="icon-repo text-info"></span> <a href="{{ PREFIX }}{{ repo }}">{{ repo }}</a>
             </div>
             <span id="{{ repo }}" class="dru-short text-muted"></span>

@@ -24,3 +24,4 @@ body { margin-bottom: 6em; }
 .dru-desc pre { border-color: transparent; }
 .dru-ns .panel-body { padding: 5px 15px; }
 .dru-ns tbody > tr:first-child > th, .dru-ns tbody > tr:first-child > td { border-top: none; }
+.dru-ns .panel-title > a { color: #337ab7; font-weight: bold; }

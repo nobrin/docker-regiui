@@ -1,4 +1,11 @@
-% rebase("frame.html", title="%s:%s" % (reponame, info["name"]), breadcrambs=[(reponame, PREFIX + reponame), (info["name"], None)])
+% if "/" in reponame:
+%   ns, repo = reponame.split("/", 1)
+%   breadcrambs = [(ns, PREFIX + ns), (repo, PREFIX + ns + "/" + repo)]
+% else:
+%   breadcrambs = [(reponame, PREFIX + reponame)]
+% end
+% breadcrambs.append((info["name"], None))
+% rebase("frame.html", title="%s:%s" % (reponame, info["name"]), breadcrambs=breadcrambs)
     <div class="row">
       <div class="col-md-12">
         <div style="position:relative">

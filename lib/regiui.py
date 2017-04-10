@@ -340,6 +340,11 @@ def app():
                 repo = reg.repo(reponame)
                 info = repo.get_info(tagname)
                 return template("repo-taginfo.html", reponame=reponame, info=info)
+        else:
+            # path may be a namespace
+            ns_repos = filter(lambda x: x.startswith("%s/" % path), repos)
+            if ns_repos:
+                return template("index.html", repos=ns_repos, namespace=path)
 
         raise HTTPError(404)
 
