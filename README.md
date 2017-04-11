@@ -133,6 +133,9 @@ $ docker run --rm \
 
 ----
 ## Release Notes
+### 0.4.0 - 11 Apr 2017
+- Add browsing namespaces
+
 ### 0.3.0 - 16 Feb 2017
 - Add description editor for repositories
 - Refactoring codes
