@@ -42,7 +42,7 @@
                 <tr><th>Key</th><th>Value</th></tr>
               </thead>
               <tbody>
-                % for key, value in sorted(info["labels"].items()):
+                % for key, value in (sorted(info["labels"].items()) if info["labels"] else []):
                 <tr><td><b>{{ key }}</b></td><td>{{ value }}</td></tr>
                 % end
                 % if not info["labels"]:
