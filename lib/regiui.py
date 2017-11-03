@@ -222,6 +222,13 @@ def app():
     REGISTRY = os.environ.get("REGIUI_REGISTRY", "http://localhost:5000")
     DELETE_ENABLED = (os.environ.get("REGIUI_DELETE_ENABLED", "false").lower() == "true")
 
+    # If docker-registry use AWS-S3 as filesystem, 'SSL: CERTIFICATE_VERIFY_FAILED' will be caused.
+    # Turn off SSL verification to avoid it. (May cause security risk!!)
+    if os.environ.get("REGIUI_WITHOUT_SSL_VERIFICATION"):
+        import ssl
+        ssl._create_default_https_context = ssl._create_unverified_context
+        logger.warning("%-15s: %r" % ("SSL VERIFY" , "OFF"))
+
     for n in ("LIB_PATH", "SHARE_PATH", "DATA_PATH", "STATIC_PATH", "PREFIX", "REGISTRY", "DELETE_ENABLED"):
         logger.info("%-15s: %r" % (n, locals()[n]))
     logger.info("%-15s: %r" % ("TEMPLATE_PATH", bottle.TEMPLATE_PATH))
